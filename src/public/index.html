@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rain Race</title>
+</head>
+<body>
+  <h1>Welcome to Rain Race!</h1>
+  <form id="join-form">
+    <label for="name">Enter your name:</label>
+    <input type="text" id="name" name="name" required>
+    <button type="submit">Start</button>
+  </form>
+  <div id="location-info">
+    <h2>Location</h2>
+    <p id="location"> Fetching your location...</p>
+  </div>
+
+  <h2>Leaderboard</h2>
+  <ul id="leaderboard">Loading...</ul>
+
+  <script>
+    let userName = "";
+    document.getElementById('join-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userName = document.getElementById('name').value;
+
+      try {
+        const response = await fetch("/api/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json"},
+          body: JSON.stringify({ name:userName }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          alert(`Welcome, ${data.user.name}!`);
+          fetchUsers();
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch(error) {
+        console.error("Failed to Join: ", error);
+      }
+    });
+
+    async function fetchUsers() {
+      try {
+        const response = await fetch("/api/leaderboard");
+        const users = await response.json();
+        const userList = document.getElementById("leaderboard");
+        userList.innerHTML = ""; // Clear out list
+
+        users.forEach(user => {
+          const li = document.createElement("li");
+          li.textContent = `${user.rainfall} inches - ${user.name} - ${user.location} (${user.isOnline ? "online" : "offline"})`;
+          userList.appendChild(li);
+        });
+      } catch(error) {
+        console.error("Failed to fetch users:", error);
+      }
+    }
+
+    // Fetch interval
+    setInterval(fetchUsers, 5000);
+
+    // Mark user as offline when tab is closed
+    window.addEventListener("beforeunload", () => {
+      if (userName) {
+        fetch("/api/leave", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: userName }),
+        })
+      }
+    });
+
+    fetchUsers(); // Initial load of users
+  </script>
+</body>
+</html>
