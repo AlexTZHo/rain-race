@@ -21,14 +21,11 @@ export interface LocationData {
   cacheTimestamp: number;
 }
 
-export interface WeatherData {
-
-}
-  
 export interface User {
   name: string;
   location: string;
   rainfall: number;
+  weather: string;
   isOnline: boolean;
   lat: number;
   lon: number;

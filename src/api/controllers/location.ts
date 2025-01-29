@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { LocationData } from '../models/serverTypes';
+import { LocationData } from '../models/types';
 import axios from 'axios';
 
 // Fetch user's location based on IP
-export const fetchLocation = async (req: Request, res: Response) => {
+const fetchLocation = async (req: Request, res: Response) => {
     try {
-        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
-        const geoUrl = `https://api.techniknews.net/ipgeo/${clientIp}`;
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '136.55.183.28';
+        const geoUrl = `https://api.techniknews.net/ipgeo/136.55.183.28`;
         const response = await axios.get<LocationData>(geoUrl);
         const locationData = response.data;
 

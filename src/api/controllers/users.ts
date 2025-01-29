@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
-import { LocationData, User } from '../models/serverTypes';
+import { LocationData, User } from '../models/types';
+import { fetchWeatherApi } from 'openmeteo';
+import { wmoCodes } from '../models/wmoCodes';
 
-const users: User[] = [];
+export const users: User[] = [];
 
-export const joinRace = async (req: Request, res: Response) => {
+const joinRace = async (req: Request, res: Response) => {
     const { name } = req.body;
     if (!name) {
         res.status(400).json({ error: 'Name is required' });
@@ -12,9 +14,9 @@ export const joinRace = async (req: Request, res: Response) => {
     }
 
     try {
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
-        const geoResponse = await axios.get<LocationData>(`https://api.techniknews.net/ipgeo/${ip}`);
-        const locationData = geoResponse.data;
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '136.55.183.28';
+        const response = await axios.get<LocationData>(`https://api.techniknews.net/ipgeo/136.55.183.28`);
+        const locationData = response.data;
         const location = `${locationData.city}, ${locationData.regionName}, ${locationData.country}`;
         const latitude = locationData.lat;
         const longitude = locationData.lon;
@@ -23,8 +25,9 @@ export const joinRace = async (req: Request, res: Response) => {
         if (user) {
             user.isOnline = true;
         } else {
-            user = { name, location, rainfall: 0, isOnline: true, lat: latitude, lon: longitude };
+            user = { name, location, rainfall: 0, weather: "Temp and Weather Not Found", isOnline: true, lat: latitude, lon: longitude };
             users.push(user);
+            updateWeather(user);
         }
         res.json({ message: 'Joined successfully', user });
         return;
@@ -35,16 +38,48 @@ export const joinRace = async (req: Request, res: Response) => {
     }
 }
 
-export const getLeaderboard = (req: Request, res: Response) => {
+const getLeaderboard = (req: Request, res: Response) => {
     users.sort((a, b) => b.rainfall - a.rainfall);
     res.json(users);
 }
 
-export const leaveRace = (req: Request, res: Response) => {
+const leaveRace = (req: Request, res: Response) => {
     const { name } = req.body;
     const user = users.find((u) => u.name === name);
     if (user) user.isOnline = false;
     res.json({ message: 'User left' });
+}
+
+export const updateWeather = async (user: User) => {
+    try {
+        // Fetch weather data from open-meteo API using lat and lon
+        const url = "https://api.open-meteo.com/v1/forecast";
+        const params = {
+            "latitude": user.lat,
+            "longitude": user.lon,
+            "current": ["temperature_2m", "rain", "weather_code"],
+            "temperature_unit": "fahrenheit",
+            "precipitation_unit": "inch"
+        }
+        
+        const responses = await fetchWeatherApi(url, params);
+        const current = responses[0].current();        
+        // Check the variable indices for weather data
+        const temperature = current?.variables(0)!.value();
+        const rainfall = current?.variables(1)!.value();
+        const weatherCode = current?.variables(2)!.value();
+
+        // Set weather string
+        user.weather = temperature?.toFixed(0) + "F " + wmoCodes[weatherCode!];
+        
+        // Add rain then round to 2 decimals
+        user.rainfall += (rainfall ?  rainfall : 0);
+        user.rainfall = parseFloat(user.rainfall.toFixed(2));
+
+        console.log(`Updated rainfall for ${user.name}: ${user.rainfall.toFixed(2)} inches`);
+    } catch (error) {
+        console.error('Failed to fetch rainfall', error)
+    }
 }
 
 export default { joinRace, getLeaderboard, leaveRace };

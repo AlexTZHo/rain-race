@@ -36,7 +36,7 @@
         const data = await response.json();
         if (response.ok) {
           alert(`Welcome, ${data.user.name}!`);
-          fetchUsers();
+          getLeaderboard();
         } else {
           alert("Error: " + data.error);
         }
@@ -45,7 +45,7 @@
       }
     });
 
-    async function fetchUsers() {
+    async function getLeaderboard() {
       try {
         const response = await fetch("/api/leaderboard");
         const users = await response.json();
@@ -54,7 +54,7 @@
 
         users.forEach(user => {
           const li = document.createElement("li");
-          li.textContent = `${user.rainfall} inches - ${user.name} - ${user.location} (${user.isOnline ? "online" : "offline"})`;
+          li.textContent = `${user.rainfall} inches -- ${user.name} - ${user.location} (${user.isOnline ? "online" : "offline"})`;
           userList.appendChild(li);
         });
       } catch(error) {
