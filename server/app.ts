@@ -5,6 +5,7 @@ import {updateWeather} from './api/controllers/users';
 import {users} from './api/controllers/users';
 
 const app = express();
+
 const PORT = 3000;
 
 // Serve static files from the "public" directory

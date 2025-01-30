@@ -14,7 +14,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ users }) => (
             ) : (
                 users.map((user, index) => (
                 <li key={index}>
-                    {user.rainfall} inches -- {user.name} - {user.location} ({user.isOnline ? 'online' : 'offline'})
+                    {user.rainfall} inches -- {user.name} - {user.weather} ({user.isOnline ? 'online' : 'offline'})
                 </li>
                 ))
             )}

@@ -1,11 +1,36 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
-import { LocationData, User } from '../models/types';
 import { fetchWeatherApi } from 'openmeteo';
+import { LocationData, User } from '../models/types';
 import { wmoCodes } from '../models/wmoCodes';
+import { ATLANTA } from '../models/constants';
 
 // STOPSHIP: Replace with DB to add authentication and persisting scores
 export const users: User[] = [];
+export const clients: any[] = [];
+
+const subscribeUpdates = (req: Request, res: Response) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    clients.push(res);
+
+    if (users.length > 0) {
+        res.write(`data: ${JSON.stringify(users)}\n\n`);
+    }
+
+    req.on("close", () => {
+        // Remove on disconnect
+        clients.splice(clients.indexOf(res), 1);
+    })
+}
+
+const broadcastUpdates = () => {
+    clients.forEach((client) => {
+        client.write(`data: ${JSON.stringify(users)}\n\n`);
+    })
+}
 
 /**
  * Checks for a name and requests location and weather data. 
@@ -15,6 +40,7 @@ export const users: User[] = [];
  * @returns 
  */
 const joinRace = async (req: Request, res: Response) => {
+    console.log("Entering race");
     const { name } = req.body;
     if (!name) {
         res.status(400).json({ error: 'Name is required' });
@@ -22,22 +48,38 @@ const joinRace = async (req: Request, res: Response) => {
     }
 
     try {
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '136.55.183.28';
-        // REPLACE with ip
-        const response = await axios.get<LocationData>(`https://api.techniknews.net/ipgeo/136.55.183.28`);
+        let latitude: number;
+        let longitude: number;
+        let location: string;
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '120.0.0.1';
+        const response = await axios.get<LocationData>(`https://api.techniknews.net/ipgeo/${ip}`);
+        
         const locationData = response.data;
-        const location = `${locationData.city}, ${locationData.regionName}, ${locationData.country}`;
-        const latitude = locationData.lat;
-        const longitude = locationData.lon;
+        if (locationData.cached === true || locationData.status === 'fail') {
+            latitude = ATLANTA[0]
+            longitude = ATLANTA[1]
+            location = "Atlanta, Georgia, United States"
+        } else {
+            location = `${locationData.city}, ${locationData.regionName}, ${locationData.country}`;
+            latitude = locationData.lat;
+            longitude = locationData.lon;
+        }
+
 
         let user = users.find((u) => u.name === name);
         if (user) {
             user.isOnline = true;
         } else {
+            console.log("adding user");
             user = { name, location: location, rainfall: 0, weather: "Temp and Weather Not Found", isOnline: true, lat: latitude, lon: longitude };
             users.push(user);
+            clients.forEach((client) => {
+                client.write(`data: ${JSON.stringify(users)}\n\n`);
+            })
             updateWeather(user);
         }
+
+        broadcastUpdates();
         res.json({ message: 'Joined successfully', user });
         return;
     } catch (error) {
@@ -66,7 +108,10 @@ const leaveRace = (req: Request, res: Response) => {
     const { name } = req.body;
     const user = users.find((u) => u.name === name);
     console.log(name + " is leaving");
-    if (user) user.isOnline = false;
+    if (user)  {
+        user.isOnline = false;
+        broadcastUpdates();
+    }
     res.json({ message: 'User left' });
 }
 
@@ -76,6 +121,7 @@ const leaveRace = (req: Request, res: Response) => {
  * @param user 
  */
 export const updateWeather = async (user: User) => {
+    console.log("Updating weather");
     try {
         // Fetch weather data from open-meteo API using lat and lon
         const url = "https://api.open-meteo.com/v1/forecast";
@@ -90,18 +136,24 @@ export const updateWeather = async (user: User) => {
         const responses = await fetchWeatherApi(url, params);
         const current = responses[0].current();        
         // Check the variable indices for weather data
-        const temperature = current?.variables(0)!.value();
-        const rainfall = current?.variables(1)!.value();
-        const weatherCode = current?.variables(2)!.value();
-
-        // Set weather string
-        user.weather = temperature?.toFixed(0) + "F " + wmoCodes[weatherCode!];
+        if (current) {
+            const temperature = current.variables(0)!.value();
+            const rainfall = current.variables(1)!.value();
+            const weatherCode = current.variables(2)!.value();          
+            if (rainfall !== undefined && !isNaN(rainfall)) {
+                // Add rain then round to 2 decimals
+                user.rainfall += parseFloat(rainfall.toFixed(2));
+                console.log(`Updated rainfall for ${user.name}: ${user.rainfall.toFixed(2)} inches`);
+            } else {
+                console.warn("Rainfall data is invalid or undefined.");
+            }
         
-        // Add rain then round to 2 decimals
-        user.rainfall += (rainfall ?  rainfall : 0);
-        user.rainfall = parseFloat(user.rainfall.toFixed(2));
-
-        console.log(`Updated rainfall for ${user.name}: ${user.rainfall.toFixed(2)} inches`);
+            if (temperature && weatherCode !== undefined) {
+                user.weather = `${temperature.toFixed(0)}F ${wmoCodes[weatherCode]}`;
+            }
+        } else {
+            console.error("No response from openmeteo");
+        }
     } catch (error) {
         console.error('Failed to fetch rainfall', error)
     }
@@ -110,4 +162,4 @@ export const updateWeather = async (user: User) => {
 /**
  * User controller for joining race, fetching leaderboard, and leaving race.
  */
-export default { joinRace, getLeaderboard, leaveRace };
+export default { subscribeUpdates, joinRace, getLeaderboard, leaveRace };

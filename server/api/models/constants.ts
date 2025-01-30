@@ -1,0 +1,1 @@
+export const ATLANTA = [33.749, -84.388]

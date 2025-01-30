@@ -22,6 +22,27 @@ const App: React.FC = () => {
     };
 
     fetchLeaderboard();
+
+    // Subscribe to server-sent events
+    const eventSource = new EventSource('/api/updates');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const updatedUsers = JSON.parse(event.data);
+        setUsers(updatedUsers);
+      } catch (error) {
+        console.error('Error parsing SSE data:', error);
+      }
+    }
+
+    eventSource.onerror = () => {
+      console.error('SSE connection lost, attempting reconnect...')
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    }
   }, []);
 
   const handleJoin = async (name: string) => {

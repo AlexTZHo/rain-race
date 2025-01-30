@@ -21,6 +21,9 @@ router
     .post(usersController.leaveRace);
 router
     .route('/leaderboard')
-    .get(usersController.getLeaderboard)
+    .get(usersController.getLeaderboard);
+router
+    .route('/updates')
+    .get(usersController.subscribeUpdates);
 
 export default router;
