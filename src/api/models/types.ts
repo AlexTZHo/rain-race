@@ -1,3 +1,6 @@
+/**
+ * GEO IP DATA
+ */
 export interface LocationData {
   status: string;
   continent: string;
@@ -21,6 +24,9 @@ export interface LocationData {
   cacheTimestamp: number;
 }
 
+/**
+ * USER ENTRY FOR IN MEMORY DB
+ */
 export interface User {
   name: string;
   location: string;

@@ -2,7 +2,11 @@ import { Request, Response } from 'express';
 import { LocationData } from '../models/types';
 import axios from 'axios';
 
-// Fetch user's location based on IP
+/**
+ * 
+ * @param req 
+ * @param res 
+ */
 const fetchLocation = async (req: Request, res: Response) => {
     try {
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '136.55.183.28';

@@ -7,21 +7,31 @@
 </head>
 <body>
   <h1>Welcome to Rain Race!</h1>
+  <!-- JOIN FORM: Visible on load -->
   <form id="join-form">
     <label for="name">Enter your name:</label>
     <input type="text" id="name" name="name" required>
     <button type="submit">Start</button>
   </form>
-  <div id="location-info">
-    <h2>Location</h2>
+
+  <div id="location-container" style="display: none;">
+    <h2>Current Location</h2>
     <p id="location"> Fetching your location...</p>
+    <button id="change-location-btn">Change Location</button>
   </div>
 
   <h2>Leaderboard</h2>
-  <ul id="leaderboard">Loading...</ul>
+  <ul id="leaderboard">Waiting for players...</ul>
 
   <script>
+    // STOPSHIP: Replace HTML script logic with React Components
+    // Add CSS stylesheet or use Tailwind
     let userName = "";
+    // ON LOAD
+    document.getElementById('leaderboard').addEventListener('')
+
+
+    // JOIN FORM SUBMIT
     document.getElementById('join-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       const userName = document.getElementById('name').value;
@@ -37,6 +47,10 @@
         if (response.ok) {
           alert(`Welcome, ${data.user.name}!`);
           getLeaderboard();
+
+           // Hide join-form and show location container
+          document.getElementById('join-form').style.display = 'none';
+          document.getElementById('location-container').style.display = 'block';
         } else {
           alert("Error: " + data.error);
         }
@@ -54,7 +68,7 @@
 
         users.forEach(user => {
           const li = document.createElement("li");
-          li.textContent = `${user.rainfall} inches -- ${user.name} - ${user.location} (${user.isOnline ? "online" : "offline"})`;
+          li.textContent = `${user.rainfall} inches -- ${user.name} - ${user.weather} (${user.isOnline ? "online" : "offline"})`;
           userList.appendChild(li);
         });
       } catch(error) {

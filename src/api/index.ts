@@ -2,7 +2,12 @@ import express from 'express';
 import locationController from '../api/controllers/location';
 import usersController from '../api/controllers/users';
 
+// STOPSHIP: Add authcontroller for registering and logging in
 
+/**
+ * Express router for api calls in app.
+ * Currently handles location and user data.
+ */
 const router = express.Router();
 
 router
@@ -18,4 +23,4 @@ router
     .route('/leaderboard')
     .get(usersController.getLeaderboard)
 
-module.exports = router;
+export default router;

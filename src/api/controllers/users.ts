@@ -4,8 +4,16 @@ import { LocationData, User } from '../models/types';
 import { fetchWeatherApi } from 'openmeteo';
 import { wmoCodes } from '../models/wmoCodes';
 
+// STOPSHIP: Replace with DB to add authentication and persisting scores
 export const users: User[] = [];
 
+/**
+ * Checks for a name and requests location and weather data. 
+ * Adds the user to the in memory array.
+ * @param req body - user's name
+ * @param res 
+ * @returns 
+ */
 const joinRace = async (req: Request, res: Response) => {
     const { name } = req.body;
     if (!name) {
@@ -15,6 +23,7 @@ const joinRace = async (req: Request, res: Response) => {
 
     try {
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '136.55.183.28';
+        // REPLACE with ip
         const response = await axios.get<LocationData>(`https://api.techniknews.net/ipgeo/136.55.183.28`);
         const locationData = response.data;
         const location = `${locationData.city}, ${locationData.regionName}, ${locationData.country}`;
@@ -25,7 +34,7 @@ const joinRace = async (req: Request, res: Response) => {
         if (user) {
             user.isOnline = true;
         } else {
-            user = { name, location, rainfall: 0, weather: "Temp and Weather Not Found", isOnline: true, lat: latitude, lon: longitude };
+            user = { name, location: location, rainfall: 0, weather: "Temp and Weather Not Found", isOnline: true, lat: latitude, lon: longitude };
             users.push(user);
             updateWeather(user);
         }
@@ -38,11 +47,21 @@ const joinRace = async (req: Request, res: Response) => {
     }
 }
 
+/**
+ * Sorts the current users by rainfall total
+ * @param req 
+ * @param res json of sorted users 
+ */
 const getLeaderboard = (req: Request, res: Response) => {
     users.sort((a, b) => b.rainfall - a.rainfall);
     res.json(users);
 }
 
+/**
+ * Sets user to offline when tab is closed
+ * @param req 
+ * @param res message: User left
+ */
 const leaveRace = (req: Request, res: Response) => {
     const { name } = req.body;
     const user = users.find((u) => u.name === name);
@@ -50,6 +69,11 @@ const leaveRace = (req: Request, res: Response) => {
     res.json({ message: 'User left' });
 }
 
+/**
+ * Makes request openmeteo for temperature in F, rain, and weather code.
+ * Creates an updated weather string for user and adds current rainfall (inches) to user's total.
+ * @param user 
+ */
 export const updateWeather = async (user: User) => {
     try {
         // Fetch weather data from open-meteo API using lat and lon
@@ -82,4 +106,7 @@ export const updateWeather = async (user: User) => {
     }
 }
 
+/**
+ * User controller for joining race, fetching leaderboard, and leaving race.
+ */
 export default { joinRace, getLeaderboard, leaveRace };
