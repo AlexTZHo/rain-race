@@ -2,18 +2,18 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "CommonJS",
-    "rootDir": "./src",  
+    "rootDir": "server",  
     "outDir": "./dist",  
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "Node",
-    "baseUrl": "./src",
+    "baseUrl": "server",
     "paths": {
       "@api/*": ["api/*"],
       "@controllers/*": ["api/controllers/*"],
       "@models/*": ["api/models/*"]
     }
   },
-  "include": ["src"],
+  "include": ["server"],
   "exclude": ["node_modules", "dist"]
 }

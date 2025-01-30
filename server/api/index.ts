@@ -1,6 +1,6 @@
 import express from 'express';
-import locationController from '../api/controllers/location';
-import usersController from '../api/controllers/users';
+import locationController from './controllers/location';
+import usersController from './controllers/users';
 
 // STOPSHIP: Add authcontroller for registering and logging in
 

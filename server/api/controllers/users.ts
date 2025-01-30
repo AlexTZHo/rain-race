@@ -65,6 +65,7 @@ const getLeaderboard = (req: Request, res: Response) => {
 const leaveRace = (req: Request, res: Response) => {
     const { name } = req.body;
     const user = users.find((u) => u.name === name);
+    console.log(name + " is leaving");
     if (user) user.isOnline = false;
     res.json({ message: 'User left' });
 }
