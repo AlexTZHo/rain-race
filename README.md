@@ -19,10 +19,10 @@ npm run dev
 
 ## Features to Add
 
-### React Components
-
 ### User Authorization
 
+
 ### Database for User Data
+
 
 ### CSS

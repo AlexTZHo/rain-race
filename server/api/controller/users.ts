@@ -1,14 +1,19 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import { fetchWeatherApi } from 'openmeteo';
-import { LocationData, User } from '../models/types';
-import { wmoCodes } from '../models/wmoCodes';
-import { ATLANTA } from '../models/constants';
+import { IPLocationData, User, wmoCodes, ATLANTA } from '../models/constants';
+import { getLocationName } from './helpers/getLocationName';
 
-// STOPSHIP: Replace with DB to add authentication and persisting scores
+// STOPSHIP: Replace with DB to add authentication and persisting scores.
+// In memory storage clears on restart.
 export const users: User[] = [];
 export const clients: any[] = [];
 
+/**
+ * Called in on loading client. Used in EventSource in React App
+ * @param req 
+ * @param res 
+ */
 const subscribeUpdates = (req: Request, res: Response) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -26,6 +31,9 @@ const subscribeUpdates = (req: Request, res: Response) => {
     })
 }
 
+/**
+ * Sends out updated user data for leaderboard updates
+ */
 const broadcastUpdates = () => {
     clients.forEach((client) => {
         client.write(`data: ${JSON.stringify(users)}\n\n`);
@@ -40,7 +48,6 @@ const broadcastUpdates = () => {
  * @returns 
  */
 const joinRace = async (req: Request, res: Response) => {
-    console.log("Entering race");
     const { name } = req.body;
     if (!name) {
         res.status(400).json({ error: 'Name is required' });
@@ -52,7 +59,7 @@ const joinRace = async (req: Request, res: Response) => {
         let longitude: number;
         let location: string;
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '120.0.0.1';
-        const response = await axios.get<LocationData>(`https://api.techniknews.net/ipgeo/${ip}`);
+        const response = await axios.get<IPLocationData>(`https://api.techniknews.net/ipgeo/${ip}`);
         
         const locationData = response.data;
         if (locationData.cached === true || locationData.status === 'fail') {
@@ -70,16 +77,13 @@ const joinRace = async (req: Request, res: Response) => {
         if (user) {
             user.isOnline = true;
         } else {
-            console.log("adding user");
-            user = { name, location: location, rainfall: 0, weather: "Temp and Weather Not Found", isOnline: true, lat: latitude, lon: longitude };
+            user = { name, location: location, rainfall: 0, weather: "Finding weather data...", isOnline: true, lat: latitude, lon: longitude };
             users.push(user);
+            updateWeather(user);            
             clients.forEach((client) => {
                 client.write(`data: ${JSON.stringify(users)}\n\n`);
             })
-            updateWeather(user);
         }
-
-        broadcastUpdates();
         res.json({ message: 'Joined successfully', user });
         return;
     } catch (error) {
@@ -121,7 +125,6 @@ const leaveRace = (req: Request, res: Response) => {
  * @param user 
  */
 export const updateWeather = async (user: User) => {
-    console.log("Updating weather");
     try {
         // Fetch weather data from open-meteo API using lat and lon
         const url = "https://api.open-meteo.com/v1/forecast";
@@ -142,6 +145,7 @@ export const updateWeather = async (user: User) => {
             const weatherCode = current.variables(2)!.value();          
             if (rainfall !== undefined && !isNaN(rainfall)) {
                 // Add rain then round to 2 decimals
+                // TODO: Rainfall sometimes returns longer than 2 decimal places 
                 user.rainfall += parseFloat(rainfall.toFixed(2));
                 console.log(`Updated rainfall for ${user.name}: ${user.rainfall.toFixed(2)} inches`);
             } else {
@@ -151,6 +155,7 @@ export const updateWeather = async (user: User) => {
             if (temperature && weatherCode !== undefined) {
                 user.weather = `${temperature.toFixed(0)}F ${wmoCodes[weatherCode]}`;
             }
+            broadcastUpdates();
         } else {
             console.error("No response from openmeteo");
         }
@@ -160,6 +165,38 @@ export const updateWeather = async (user: User) => {
 }
 
 /**
+ * Takes the user's name to find specific user and add new coordinates for rainfall catching
+ * @param req user's name, new latitude, new longitude 
+ * @param res 
+ * @returns void
+ */
+const updateLocation = async (req: Request, res: Response): Promise<void> => {
+    const { name, lat, lon } = req.body;
+    if (!name || lat === undefined || lon === undefined) {
+        res.status(400).json({ error: 'Name, latitude, and longitude are required' });
+        return;
+    }
+
+    const user = users.find((u) => u.name === name);
+    if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+    }
+
+    user.lat = lat;
+    user.lon = lon;
+    const newLocation = await getLocationName(lat, lon);
+    user.location = newLocation; // Update location string
+
+    console.log(`${name} updated location to ${lat}, ${lon}`);
+
+    broadcastUpdates();
+
+    res.json({ message: 'Location updated successfully', user });
+    return;
+};
+
+/**
  * User controller for joining race, fetching leaderboard, and leaving race.
  */
-export default { subscribeUpdates, joinRace, getLeaderboard, leaveRace };
+export default { subscribeUpdates, joinRace, getLeaderboard, leaveRace, updateLocation };

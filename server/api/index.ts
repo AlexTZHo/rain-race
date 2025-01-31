@@ -1,8 +1,9 @@
 import express from 'express';
-import locationController from './controllers/location';
-import usersController from './controllers/users';
+import usersController from './controller/users';
 
 // STOPSHIP: Add authcontroller for registering and logging in
+// Use JWT for auth checks
+
 
 /**
  * Express router for api calls in app.
@@ -10,9 +11,10 @@ import usersController from './controllers/users';
  */
 const router = express.Router();
 
+
 router
-    .route('/location')
-    .get(locationController.fetchLocation);
+    .route('/update-location')
+    .post(usersController.updateLocation);
 router
     .route('/join')
     .post(usersController.joinRace);

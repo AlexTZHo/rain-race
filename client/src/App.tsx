@@ -4,13 +4,14 @@ import Location from './components/Location';
 import Leaderboard from './components/Leaderboard';
 import { User } from './models/types';
 
+
+
 const App: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [location, setLocation] = useState('Fetching your location...');
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    // Fetch leaderboard on initial load
     const fetchLeaderboard = async () => {
       try {
         const response = await fetch('/api/leaderboard');
@@ -21,6 +22,7 @@ const App: React.FC = () => {
       }
     };
 
+    // Fetch leaderboard on initial load
     fetchLeaderboard();
 
     // Subscribe to server-sent events
@@ -30,6 +32,8 @@ const App: React.FC = () => {
       try {
         const updatedUsers = JSON.parse(event.data);
         setUsers(updatedUsers);
+        const userObj = updatedUsers.find((user: User) => user.name === userName);
+        if (location !== userObj.location) setLocation(userObj.location)
       } catch (error) {
         console.error('Error parsing SSE data:', error);
       }
@@ -58,6 +62,7 @@ const App: React.FC = () => {
       const data = await response.json();
       if (response.ok) {
         setLocation(data.user.location); // Update location after joining
+        setupLeaveRace(name) // Set Leave Race callback
       } else {
         alert('Error: ' + data.error);
       }
@@ -66,9 +71,40 @@ const App: React.FC = () => {
     }
   };
 
-  const handleChangeLocation = () => {
-    // Handle location change logic here (e.g., integrate Google Maps or a dropdown)
-    console.log('Change Location clicked');
+  const handleChangeLocation = async (name: string, lat: number, lon: number) => {
+    try {
+        const response = await fetch('/api/update-location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, lat, lon }),
+        });
+
+        if (response.ok) {
+            console.log("Location updated successfully.");
+        } else {
+            console.error("Failed to update location.");
+        }
+    } catch (error) {
+        console.error("Error updating location:", error);
+    }
+};
+
+  const setupLeaveRace = (name: string) => {
+    const leaveRace = () => {
+      const data = JSON.stringify({ name });
+      navigator.sendBeacon('/api/leave', data);
+      console.log(`${name} left the race.`);
+    };
+  
+    window.addEventListener('beforeunload', leaveRace);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) leaveRace();
+    });
+  
+    return () => {
+      window.removeEventListener('beforeunload', leaveRace);
+      document.removeEventListener('visibilitychange', leaveRace);
+    };
   };
 
   return (
@@ -77,7 +113,7 @@ const App: React.FC = () => {
       {!userName ? (
         <JoinForm onJoin={handleJoin} />
       ) : (
-        <Location location={location} onChangeLocation={handleChangeLocation} />
+        <Location userName={userName} location={location} onChangeLocation={handleChangeLocation} />
       )}
 
       <Leaderboard users={users} />

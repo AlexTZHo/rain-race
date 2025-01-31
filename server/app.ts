@@ -1,8 +1,8 @@
 import express from 'express';
 import path from 'path';
 import apiRouter from './api/index';
-import {updateWeather} from './api/controllers/users';
-import {users} from './api/controllers/users';
+import {updateWeather} from './api/controller/users';
+import {users, clients} from './api/controller/users';
 
 const app = express();
 
@@ -20,6 +20,7 @@ app.listen(PORT, () => {
 })
 
 // Set interval to update weather and add rainfall to player score
+// STOPSHIP: Calling API every minute for each user may run into rate limit issues
 setInterval(() => {
   users.forEach((user) => {
     if (user.isOnline) {

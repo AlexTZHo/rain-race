@@ -1,3 +1,6 @@
+// STOPSHIP: Reorganize shared types into a common folder for both
+// client and server to access for easier maintenance
+
 /**
  * GEO IP DATA
  */

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "install": "",
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon --watch server --exec ts-node ./server/app.ts",
     "client": "npm run dev --prefix client"
