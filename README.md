@@ -17,6 +17,11 @@ Run below script to start app.
 npm start
 ```
 
+For formatting:
+```
+npm run format
+```
+
 Client will run on http://localhost:5173
 
 ## Limitations
