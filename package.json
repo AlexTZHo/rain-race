@@ -6,7 +6,8 @@
     "setup": "npm install && cd client && npm install",
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon --watch server --exec ts-node ./server/app.ts",
-    "client": "npm run dev --prefix client"
+    "client": "npm run dev --prefix client",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "keywords": [],
   "author": "",
@@ -21,7 +22,8 @@
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "openmeteo": "^1.1.4",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "prettier": "^3.4.2"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
