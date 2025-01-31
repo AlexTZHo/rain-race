@@ -19,6 +19,12 @@ router
     .route('/join')
     .post(usersController.joinRace);
 router
+    .route('/heartbeat')
+    .post(usersController.heartbeat);
+router
+    .route('/offline')
+    .post(usersController.markOffline);
+router
     .route('/leave')
     .post(usersController.leaveRace);
 router

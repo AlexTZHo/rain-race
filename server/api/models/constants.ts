@@ -71,6 +71,7 @@ export interface User {
     isOnline: boolean;
     lat: number;
     lon: number;
+    lastActive: Date;
 }
 
 /**

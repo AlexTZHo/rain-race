@@ -3,13 +3,14 @@ import JoinForm from './components/JoinForm';
 import Location from './components/Location';
 import Leaderboard from './components/Leaderboard';
 import { User } from './models/types';
-
+import { useHeartbeat } from './components/HeartbeatHook';
 
 
 const App: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [location, setLocation] = useState('Fetching your location...');
   const [users, setUsers] = useState<User[]>([]);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -30,10 +31,9 @@ const App: React.FC = () => {
 
     eventSource.onmessage = (event) => {
       try {
+        //STOPSHIP: Seems to be somewhat unreliable at times. 
         const updatedUsers = JSON.parse(event.data);
         setUsers(updatedUsers);
-        const userObj = updatedUsers.find((user: User) => user.name === userName);
-        if (location !== userObj.location) setLocation(userObj.location)
       } catch (error) {
         console.error('Error parsing SSE data:', error);
       }
@@ -61,8 +61,8 @@ const App: React.FC = () => {
 
       const data = await response.json();
       if (response.ok) {
+        setUser(data.user);
         setLocation(data.user.location); // Update location after joining
-        setupLeaveRace(name) // Set Leave Race callback
       } else {
         alert('Error: ' + data.error);
       }
@@ -73,39 +73,22 @@ const App: React.FC = () => {
 
   const handleChangeLocation = async (name: string, lat: number, lon: number) => {
     try {
-        const response = await fetch('/api/update-location', {
+        await fetch('/api/update-location', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, lat, lon }),
-        });
+        })
+          .then(result => result.json())
+          .then(data => setLocation(data.user.location));
 
-        if (response.ok) {
-            console.log("Location updated successfully.");
-        } else {
-            console.error("Failed to update location.");
-        }
+
     } catch (error) {
         console.error("Error updating location:", error);
     }
-};
-
-  const setupLeaveRace = (name: string) => {
-    const leaveRace = () => {
-      const data = JSON.stringify({ name });
-      navigator.sendBeacon('/api/leave', data);
-      console.log(`${name} left the race.`);
-    };
-  
-    window.addEventListener('beforeunload', leaveRace);
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) leaveRace();
-    });
-  
-    return () => {
-      window.removeEventListener('beforeunload', leaveRace);
-      document.removeEventListener('visibilitychange', leaveRace);
-    };
   };
+
+  // Check if user is still online
+  useHeartbeat(user);
 
   return (
     <div>

@@ -3,42 +3,12 @@ import axios from 'axios';
 import { fetchWeatherApi } from 'openmeteo';
 import { IPLocationData, User, wmoCodes, ATLANTA } from '../models/constants';
 import { getLocationName } from './helpers/getLocationName';
+import { broadcastUpdates, subscribeUpdates } from './helpers/updates';
 
 // STOPSHIP: Replace with DB to add authentication and persisting scores.
 // In memory storage clears on restart.
 export const users: User[] = [];
 export const clients: any[] = [];
-
-/**
- * Called in on loading client. Used in EventSource in React App
- * @param req 
- * @param res 
- */
-const subscribeUpdates = (req: Request, res: Response) => {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-
-    clients.push(res);
-
-    if (users.length > 0) {
-        res.write(`data: ${JSON.stringify(users)}\n\n`);
-    }
-
-    req.on("close", () => {
-        // Remove on disconnect
-        clients.splice(clients.indexOf(res), 1);
-    })
-}
-
-/**
- * Sends out updated user data for leaderboard updates
- */
-const broadcastUpdates = () => {
-    clients.forEach((client) => {
-        client.write(`data: ${JSON.stringify(users)}\n\n`);
-    })
-}
 
 /**
  * Checks for a name and requests location and weather data. 
@@ -77,7 +47,7 @@ const joinRace = async (req: Request, res: Response) => {
         if (user) {
             user.isOnline = true;
         } else {
-            user = { name, location: location, rainfall: 0, weather: "Finding weather data...", isOnline: true, lat: latitude, lon: longitude };
+            user = { name, location: location, rainfall: 0, weather: "Finding weather data...", isOnline: true, lat: latitude, lon: longitude, lastActive: new Date() };
             users.push(user);
             updateWeather(user);            
             clients.forEach((client) => {
@@ -196,7 +166,33 @@ const updateLocation = async (req: Request, res: Response): Promise<void> => {
     return;
 };
 
+const heartbeat = async (req: Request, res: Response) => {
+    const { name } = req.body;
+    const user = users.find(u => u.name === name);
+
+    if (user) {
+    user.lastActive = new Date();
+    user.isOnline = true;
+    broadcastUpdates();
+    }
+
+    res.status(204).end();
+};
+
+// Offline endpoint
+const markOffline = async (req: Request, res: Response) => {
+    const { name } = req.body;
+    const user = users.find(u => u.name === name);
+
+    if (user) {
+    user.isOnline = false;
+    broadcastUpdates();
+    }
+
+    res.status(204).end();
+};
+
 /**
  * User controller for joining race, fetching leaderboard, and leaving race.
  */
-export default { subscribeUpdates, joinRace, getLeaderboard, leaveRace, updateLocation };
+export default { subscribeUpdates, joinRace, getLeaderboard, leaveRace, updateLocation, heartbeat, markOffline };

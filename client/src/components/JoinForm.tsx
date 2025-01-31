@@ -4,6 +4,11 @@ interface JoinFormProps {
     onJoin: (name: string) => void;
 }
 
+/**
+ * 
+ * @param param0 
+ * @returns 
+ */
 const JoinForm: React.FC<JoinFormProps> = ({ onJoin }) => {
     const [name, setName] = useState('');
 
