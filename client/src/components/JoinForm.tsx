@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-interface JoinFormProps {
+export interface JoinFormProps {
     onJoin: (name: string) => void;
 }
 
@@ -15,7 +15,7 @@ const JoinForm: React.FC<JoinFormProps> = ({ onJoin }) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (name) {
-        onJoin(name); // Pass the name back to the parent component
+            onJoin(name); // Pass the name back to the parent component
         }
     };
 

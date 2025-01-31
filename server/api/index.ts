@@ -4,7 +4,6 @@ import usersController from './controller/users';
 // STOPSHIP: Add authcontroller for registering and logging in
 // Use JWT for auth checks
 
-
 /**
  * Express router for api calls in app.
  * Currently handles location and user data.

@@ -3,6 +3,7 @@ import { User } from '../models/types';
 
 /**
  * Sends a heartbeat as long as the user is set and not null
+ * Used for detecting if user is online or not
  * @param user 
  */
 export const useHeartbeat = (user: User | null) => {
